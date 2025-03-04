@@ -123,7 +123,7 @@ impl LspAdapter for ExtensionLspAdapter {
     ) -> Pin<Box<dyn 'a + Future<Output = Result<LanguageServerBinary>>>> {
         async move {
             let delegate = Arc::new(WorktreeDelegateAdapter(delegate.clone())) as _;
-            let command = self
+            let mut command = self
                 .extension
                 .language_server_command(
                     self.language_server_id.clone(),
@@ -151,6 +151,20 @@ impl LspAdapter for ExtensionLspAdapter {
 
                     fs::set_permissions(&path, Permissions::from_mode(0o755))
                         .context("failed to set file permissions")?;
+                }
+            }
+
+            #[cfg(windows)]
+            {
+                for arg in &mut command.args {
+                    let mut chars = arg.chars();
+                    if let (Some('/'), Some(drive), Some(':'), Some('\\')) =
+                        (chars.next(), chars.next(), chars.next(), chars.next())
+                    {
+                        if drive.is_ascii_alphabetic() {
+                            arg.remove(0);
+                        }
+                    }
                 }
             }
 
