@@ -5,6 +5,11 @@ tasks:
     cmds:
       - git pull --autostash
 
+  sync:
+    cmds:
+      - git fetch upstream main
+      - git rebase upstream/main --autostash
+
   build:
     cmds:
       - cargo build --release
@@ -20,5 +25,5 @@ tasks:
 
   update:
     cmds:
-      - task: pull
+      - task: sync
       - task: install
