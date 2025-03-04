@@ -123,7 +123,7 @@ impl LspAdapter for ExtensionLspAdapter {
     ) -> Pin<Box<dyn 'a + Future<Output = Result<LanguageServerBinary>>>> {
         async move {
             let delegate = Arc::new(WorktreeDelegateAdapter(delegate.clone())) as _;
-            let command = self
+            let mut command = self
                 .extension
                 .language_server_command(
                     self.language_server_id.clone(),
@@ -151,6 +151,23 @@ impl LspAdapter for ExtensionLspAdapter {
 
                     fs::set_permissions(&path, Permissions::from_mode(0o755))
                         .context("failed to set file permissions")?;
+                }
+            }
+
+            // Workaround for Windows path issues: removes leading slash from "/C:\..." paths in arguments.
+            // Some language servers (e.g., svelte-language-server) fail to start with incorrectly formatted paths.
+            // See: https://github.com/zed-industries/zed/issues/20559
+            #[cfg(windows)]
+            {
+                for arg in &mut command.args {
+                    let mut chars = arg.chars();
+                    if let (Some('/'), Some(drive), Some(':'), Some('\\')) =
+                        (chars.next(), chars.next(), chars.next(), chars.next())
+                    {
+                        if drive.is_ascii_alphabetic() {
+                            arg.remove(0);
+                        }
+                    }
                 }
             }
 
