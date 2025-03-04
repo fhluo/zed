@@ -1,0 +1,29 @@
+version: "3"
+
+tasks:
+  pull:
+    cmds:
+      - git pull --autostash
+
+  sync:
+    cmds:
+      - git fetch upstream main
+      - git rebase upstream/main --autostash
+
+  build:
+    cmds:
+      - cargo build --release
+
+  copy:
+    cmds:
+      - nu -c '$env.LOCALAPPDATA | path join Programs\Zed | do { mkdir $in; cp target\release\zed.exe $in}'
+
+  install:
+    cmds:
+      - task: build
+      - task: copy
+
+  update:
+    cmds:
+      - task: sync
+      - task: install
