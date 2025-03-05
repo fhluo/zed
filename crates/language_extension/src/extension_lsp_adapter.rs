@@ -154,6 +154,9 @@ impl LspAdapter for ExtensionLspAdapter {
                 }
             }
 
+            // Workaround for Windows path issues: removes leading slash from "/C:\..." paths in arguments.
+            // Some language servers (e.g., svelte-language-server) fail to start with incorrectly formatted paths.
+            // See: https://github.com/zed-industries/zed/issues/20559
             #[cfg(windows)]
             {
                 for arg in &mut command.args {
