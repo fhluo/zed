@@ -2662,6 +2662,7 @@ dependencies = [
  "core-services",
  "exec",
  "fork",
+ "fs",
  "ipc-channel",
  "parking_lot",
  "paths",
