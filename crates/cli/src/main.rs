@@ -7,6 +7,7 @@ use anyhow::{Context as _, Result};
 use clap::Parser;
 use cli::{ipc::IpcOneShotServer, CliRequest, CliResponse, IpcHandshake};
 use collections::HashMap;
+use fs as zed_fs;
 use parking_lot::Mutex;
 use std::{
     env, fs, io,
@@ -88,14 +89,14 @@ fn parse_path_with_position(argument_str: &str) -> anyhow::Result<String> {
         Err(_) => {
             let path = PathWithPosition::parse_str(argument_str);
             let curdir = env::current_dir().context("retrieving current directory")?;
-            path.map_path(|path| match fs::canonicalize(&path) {
+            path.map_path(|path| match zed_fs::canonicalize(&path) {
                 Ok(path) => Ok(path),
                 Err(e) => {
                     if let Some(mut parent) = path.parent() {
                         if parent == Path::new("") {
                             parent = &curdir
                         }
-                        match fs::canonicalize(parent) {
+                        match zed_fs::canonicalize(parent) {
                             Ok(parent) => Ok(parent.join(path.file_name().unwrap())),
                             Err(_) => Err(e),
                         }

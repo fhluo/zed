@@ -108,7 +108,7 @@ fn send_args_to_instance(args: &Args) -> anyhow::Result<()> {
         let mut paths = vec![];
         let mut urls = vec![];
         for path in args.paths_or_urls.iter() {
-            match std::fs::canonicalize(&path) {
+            match fs::canonicalize(&path) {
                 Ok(path) => paths.push(path.to_string_lossy().to_string()),
                 Err(error) => {
                     if path.starts_with("zed://")
