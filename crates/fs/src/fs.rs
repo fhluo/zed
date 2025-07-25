@@ -28,7 +28,7 @@ use serde::{Deserialize, Serialize};
 use smol::io::AsyncWriteExt;
 use std::{
     io::{self, Write},
-    path::{Component, Path, PathBuf},
+    path::{self, Component, Path, PathBuf},
     pin::Pin,
     sync::Arc,
     time::{Duration, SystemTime, UNIX_EPOCH},
@@ -615,9 +615,21 @@ impl Fs for RealFs {
     }
 
     async fn canonicalize(&self, path: &Path) -> Result<PathBuf> {
-        Ok(smol::fs::canonicalize(path)
+        let mut result = smol::fs::canonicalize(path)
             .await
-            .with_context(|| format!("canonicalizing {path:?}"))?)
+            .with_context(|| format!("canonicalizing {path:?}"));
+
+        // On Windows, canonicalize() may fail with os error 1005 on virtual/network drives.
+        // Fall back to path::absolute() if canonicalize() fails.
+        // This fixes "failed to canonicalize root path" or "error reading file" errors.
+        //
+        // See: https://github.com/rust-lang/rust/pull/86447
+        #[cfg(target_os = "windows")]
+        {
+            result = result.or_else(|err| path::absolute(path).or(Err(err)));
+        }
+
+        Ok(result?)
     }
 
     async fn is_file(&self, path: &Path) -> bool {
@@ -2549,6 +2561,23 @@ fn atomic_replace<P: AsRef<Path>>(
             None,
         )
     }
+}
+
+/// Same as `std::fs::canonicalize`, but on Windows it falls back to `path::absolute()` if `canonicalize()` fails.
+pub fn canonicalize<P: AsRef<Path>>(path: P) -> io::Result<PathBuf> {
+    let mut result = std::fs::canonicalize(path.as_ref());
+
+    // On Windows, canonicalize() may fail with os error 1005 on virtual/network drives.
+    // Fall back to path::absolute() if canonicalize() fails.
+    // This fixes "failed to canonicalize root path" or "error reading file" errors.
+    //
+    // See: https://github.com/rust-lang/rust/pull/86447
+    #[cfg(target_os = "windows")]
+    {
+        result = result.or_else(|err| path::absolute(path).or(Err(err)));
+    }
+
+    Ok(result?)
 }
 
 #[cfg(test)]

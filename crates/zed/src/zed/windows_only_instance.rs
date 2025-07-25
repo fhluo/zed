@@ -118,7 +118,7 @@ fn send_args_to_instance(args: &Args) -> anyhow::Result<()> {
         let mut urls = vec![];
         let mut diff_paths = vec![];
         for path in args.paths_or_urls.iter() {
-            match std::fs::canonicalize(&path) {
+            match fs::canonicalize(&path) {
                 Ok(path) => paths.push(path.to_string_lossy().to_string()),
                 Err(error) => {
                     if path.starts_with("zed://")
@@ -136,8 +136,8 @@ fn send_args_to_instance(args: &Args) -> anyhow::Result<()> {
         }
 
         for path in args.diff.chunks(2) {
-            let old = std::fs::canonicalize(&path[0]).log_err();
-            let new = std::fs::canonicalize(&path[1]).log_err();
+            let old = fs::canonicalize(&path[0]).log_err();
+            let new = fs::canonicalize(&path[1]).log_err();
             if let Some((old, new)) = old.zip(new) {
                 diff_paths.push([
                     old.to_string_lossy().to_string(),
